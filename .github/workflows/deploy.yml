@@ -18,6 +18,9 @@ concurrency:
 jobs:
   test:
     name: Test
+    # Skipped until Azure is configured (scripts/bootstrap/github-oidc.sh), so forks stay green.
+    # Every downstream job depends on this one and is skipped too.
+    if: vars.AZURE_CLIENT_ID != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
