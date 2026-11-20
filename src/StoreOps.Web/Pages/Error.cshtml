@@ -1,0 +1,12 @@
+@page
+@model StoreOps.Web.Pages.ErrorModel
+@{
+    ViewData["Title"] = "Error";
+}
+
+<h1>Something went wrong</h1>
+<p>The error has been logged. Please try again in a moment.</p>
+@if (!string.IsNullOrEmpty(Model.RequestId))
+{
+    <p class="muted">Request ID: <code>@Model.RequestId</code></p>
+}

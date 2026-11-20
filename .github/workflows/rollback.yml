@@ -1,0 +1,33 @@
+name: Rollback
+
+# Redeploys a previous image tag to one environment (same pipeline, same checks).
+# Find tags in the job summaries of earlier Deploy runs, or with:
+#   az acr repository show-tags --name <registry> --repository storeops-web --orderby time_desc
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to roll back
+        type: choice
+        options: [dev, test, prod]
+        required: true
+      image-tag:
+        description: Image tag to redeploy (12-char git SHA)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    uses: ./.github/workflows/deploy-environment.yml
+    with:
+      environment: ${{ inputs.environment }}
+      image-tag: ${{ inputs.image-tag }}
+      entra-client-id: ${{ inputs.environment == 'prod' && vars.ENTRA_CLIENT_ID_PROD || inputs.environment == 'test' && vars.ENTRA_CLIENT_ID_TEST || vars.ENTRA_CLIENT_ID_DEV }}

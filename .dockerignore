@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/App_Data/
+**/*.user
+.git/
+.github/
+.vs/
+.vscode/
+infra/
+docs/
+tests/

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · StoreOps</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+<header>
+    <nav>
+        <a class="brand" asp-page="/Index">StoreOps</a>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            @if ((await Authz.AuthorizeAsync(User, Policies.CanViewReports)).Succeeded)
+            {
+                <a asp-page="/Reports/Index">Reports</a>
+            }
+            @if ((await Authz.AuthorizeAsync(User, Policies.CanApproveReports)).Succeeded)
+            {
+                <a asp-page="/Reports/Pending">Approvals</a>
+            }
+            @if ((await Authz.AuthorizeAsync(User, Policies.IsAdmin)).Succeeded)
+            {
+                <a asp-page="/Admin/Index">Admin</a>
+            }
+            <span class="spacer"></span>
+            <span class="user">@User.GetUserName()</span>
+            <a asp-area="MicrosoftIdentity" asp-controller="Account" asp-action="SignOut">Sign out</a>
+        }
+    </nav>
+</header>
+<main>
+    @if (TempData["Message"] is string message)
+    {
+        <p class="flash">@message</p>
+    }
+    @if (TempData["Error"] is string error)
+    {
+        <p class="flash error">@error</p>
+    }
+    @RenderBody()
+</main>
+</body>
+</html>

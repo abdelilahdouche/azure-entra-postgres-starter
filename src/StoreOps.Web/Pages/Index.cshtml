@@ -1,0 +1,36 @@
+@page
+@{
+    ViewData["Title"] = "Home";
+    var roles = User.GetAppRoles();
+}
+
+<h1>Welcome, @User.GetUserName()</h1>
+
+<p>
+    You are signed in with Microsoft Entra ID. What you can see in this app depends only on the
+    <strong>app roles</strong> granted to your Entra groups.
+</p>
+
+<h2>Your app roles</h2>
+@if (roles.Count == 0)
+{
+    <p class="muted">No app role assigned. Ask an administrator to add you to a StoreOps group.</p>
+}
+else
+{
+    <ul>
+        @foreach (var role in roles)
+        {
+            <li><code>@role</code></li>
+        }
+    </ul>
+}
+
+<table>
+    <thead><tr><th>Page</th><th>Required role</th></tr></thead>
+    <tbody>
+    <tr><td>Reports (view, upload)</td><td><code>@AppRoles.Staff</code>, <code>@AppRoles.Manager</code> or <code>@AppRoles.Admin</code></td></tr>
+    <tr><td>Approvals</td><td><code>@AppRoles.Manager</code> or <code>@AppRoles.Admin</code></td></tr>
+    <tr><td>Admin</td><td><code>@AppRoles.Admin</code></td></tr>
+    </tbody>
+</table>

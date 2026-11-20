@@ -1,0 +1,124 @@
+name: Deploy environment (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: dev | test | prod
+        type: string
+        required: true
+      image-tag:
+        description: Image tag already pushed to the shared registry
+        type: string
+        required: true
+      entra-client-id:
+        description: Client ID of the environment's Entra app registration
+        type: string
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ steps.deploy.outputs.url }}
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ENV_NAME: ${{ inputs.environment }}
+      LOCATION: ${{ vars.AZURE_LOCATION || 'canadacentral' }}
+      # Read by infra/parameters/<env>.bicepparam (readEnvironmentVariable)
+      IMAGE_TAG: ${{ inputs.image-tag }}
+      ENTRA_CLIENT_ID: ${{ inputs.entra-client-id }}
+      DEPLOYER_OBJECT_ID: ${{ vars.DEPLOYER_OBJECT_ID }}
+      DEPLOYER_NAME: ${{ vars.DEPLOYER_NAME }}
+      DBA_GROUP_OBJECT_ID: ${{ vars.DBA_GROUP_OBJECT_ID }}
+      DBA_GROUP_NAME: ${{ vars.DBA_GROUP_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Prepare
+        run: |
+          az config set extension.use_dynamic_install=yes_without_prompt --only-show-errors
+          if [ -z "$ENTRA_CLIENT_ID" ]; then
+            echo "::error::Repository variable ENTRA_CLIENT_ID_${ENV_NAME^^} is not set (scripts/entra/create-app-registration.sh)."
+            exit 1
+          fi
+          registry="$(az deployment sub show --name storeops-shared --query properties.outputs.registryName.value -o tsv)"
+          echo "REGISTRY_NAME=$registry" >> "$GITHUB_ENV"
+
+      - name: Check images exist
+        run: |
+          for app in web jobs; do
+            az acr manifest show-metadata --registry "$REGISTRY_NAME" --name "storeops-${app}:${IMAGE_TAG}" --only-show-errors > /dev/null \
+              || { echo "::error::Image storeops-${app}:${IMAGE_TAG} not found in ${REGISTRY_NAME}"; exit 1; }
+          done
+
+      - name: What-if
+        run: |
+          {
+            echo "### What-if: ${ENV_NAME}"
+            echo '```'
+            az deployment sub what-if \
+              --location "$LOCATION" \
+              --template-file infra/main.bicep \
+              --parameters "infra/parameters/${ENV_NAME}.bicepparam" 2>&1 | sed -r 's/\x1B\[[0-9;]*m//g'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Deploy infrastructure and apps (Bicep)
+        id: deploy
+        run: |
+          az deployment sub create \
+            --name "storeops-${ENV_NAME}-${GITHUB_RUN_NUMBER}" \
+            --location "$LOCATION" \
+            --template-file infra/main.bicep \
+            --parameters "infra/parameters/${ENV_NAME}.bicepparam" \
+            --query properties.outputs -o json > outputs.json
+
+          out() { jq -r ".$1.value" outputs.json; }
+          {
+            echo "resource-group=$(out resourceGroupName)"
+            echo "identity-name=$(out identityName)"
+            echo "identity-principal-id=$(out identityPrincipalId)"
+            echo "postgres-server=$(out postgresServerName)"
+            echo "postgres-database=$(out postgresDatabaseName)"
+            echo "migrate-job=$(out migrateJobName)"
+            echo "url=https://$(out webFqdn)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Grant the managed identity its PostgreSQL role
+        env:
+          RESOURCE_GROUP: ${{ steps.deploy.outputs.resource-group }}
+          PG_SERVER: ${{ steps.deploy.outputs.postgres-server }}
+          PG_DATABASE: ${{ steps.deploy.outputs.postgres-database }}
+          APP_ROLE: ${{ steps.deploy.outputs.identity-name }}
+          APP_PRINCIPAL_ID: ${{ steps.deploy.outputs.identity-principal-id }}
+          PG_ADMIN_USER: ${{ vars.DEPLOYER_NAME }}
+        run: bash scripts/db/grant-db-access.sh
+
+      - name: Run database migrations
+        run: bash scripts/ops/run-job.sh "${{ steps.deploy.outputs.resource-group }}" "${{ steps.deploy.outputs.migrate-job }}"
+
+      - name: Smoke test
+        run: |
+          url="${{ steps.deploy.outputs.url }}"
+          for i in $(seq 1 30); do
+            if curl -fsS "$url/healthz/ready" > /dev/null; then
+              echo "✅ $url is ready (database reachable with the managed identity)"
+              echo "✅ ${ENV_NAME}: $url (image \`${IMAGE_TAG}\`)" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "… waiting for $url ($i/30)"
+            sleep 10
+          done
+          echo "::error::$url/healthz/ready did not return 200"
+          exit 1

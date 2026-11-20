@@ -1,0 +1,39 @@
+@page
+@model StoreOps.Web.Pages.Admin.IndexModel
+@{
+    ViewData["Title"] = "Admin";
+    var db = Model.Database;
+}
+
+<h1>Platform status</h1>
+<p class="muted">Admin only (<code>@AppRoles.Admin</code>). No secrets are displayed: there are none to display.</p>
+
+<section class="card">
+    <h2>Database</h2>
+    <dl>
+        <dt>Connection</dt>
+        <dd>@(db.CanConnect ? "✅ Connected" : "❌ " + db.Error)</dd>
+        <dt>Authentication</dt>
+        <dd>@(Model.Postgres.UseEntraAuth ? "Microsoft Entra token (managed identity), no password" : "Password (local development)")</dd>
+        <dt>Server</dt>
+        <dd><code>@Model.Postgres.Host</code> / <code>@Model.Postgres.Database</code></dd>
+        <dt>Connected as</dt>
+        <dd><code>@(db.CurrentUser ?? "-")</code></dd>
+        <dt>Version</dt>
+        <dd>@(db.ServerVersion ?? "-")</dd>
+        <dt>Applied migrations</dt>
+        <dd>@(db.AppliedMigrations.Count == 0 ? "-" : string.Join(", ", db.AppliedMigrations))</dd>
+    </dl>
+</section>
+
+<section class="card">
+    <h2>Application</h2>
+    <dl>
+        <dt>Environment</dt>
+        <dd>@Model.EnvironmentName</dd>
+        <dt>Version (image tag)</dt>
+        <dd><code>@Model.Version</code></dd>
+        <dt>File storage</dt>
+        <dd><code>@(string.IsNullOrEmpty(Model.Storage.BlobEndpoint) ? "local disk" : Model.Storage.BlobEndpoint + Model.Storage.UploadsContainer)</code></dd>
+    </dl>
+</section>

@@ -1,0 +1,15 @@
+# Local development database. In Azure there is no password at all (Entra + managed identity).
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: storeops
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: local-dev-only
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

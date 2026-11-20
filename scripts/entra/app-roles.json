@@ -1,0 +1,26 @@
+[
+  {
+    "id": "9b2beaa3-e2f9-4f97-8a62-649503ae6ea8",
+    "allowedMemberTypes": ["User"],
+    "displayName": "Store staff",
+    "description": "Can view and upload store reports.",
+    "value": "Store.Staff",
+    "isEnabled": true
+  },
+  {
+    "id": "8b31249f-a380-48df-9eec-b278ecf8d035",
+    "allowedMemberTypes": ["User"],
+    "displayName": "Store manager",
+    "description": "Store staff permissions, plus approving reports.",
+    "value": "Store.Manager",
+    "isEnabled": true
+  },
+  {
+    "id": "bc7f2b3c-df56-473a-861e-46c30e6be99f",
+    "allowedMemberTypes": ["User"],
+    "displayName": "StoreOps administrator",
+    "description": "Full access, including the platform status page.",
+    "value": "StoreOps.Admin",
+    "isEnabled": true
+  }
+]

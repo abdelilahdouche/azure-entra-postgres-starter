@@ -1,0 +1,42 @@
+@page
+@model StoreOps.Web.Pages.Reports.IndexModel
+@{
+    ViewData["Title"] = "Reports";
+}
+
+<h1>Store reports</h1>
+
+<section class="card">
+    <h2>Upload a report</h2>
+    <form method="post" enctype="multipart/form-data">
+        <div asp-validation-summary="All" class="error"></div>
+        <label>Store code <input asp-for="Input.StoreCode" placeholder="e.g. MTL-012" /></label>
+        <label>Title <input asp-for="Input.Title" placeholder="Daily cash count" /></label>
+        <label>File (PDF, image, Excel or CSV, max 10 MB) <input asp-for="Input.File" type="file" /></label>
+        <button type="submit">Upload</button>
+    </form>
+</section>
+
+<h2>Latest reports</h2>
+@if (Model.Reports.Count == 0)
+{
+    <p class="muted">No reports yet.</p>
+}
+else
+{
+    <table>
+        <thead><tr><th>Store</th><th>Title</th><th>Uploaded</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var r in Model.Reports)
+        {
+            <tr>
+                <td>@r.StoreCode</td>
+                <td>@r.Title</td>
+                <td>@r.UploadedAt.ToString("yyyy-MM-dd HH:mm") · @r.UploadedBy</td>
+                <td><span class="badge @r.Status.ToString().ToLowerInvariant()">@r.Status</span></td>
+                <td><a asp-page="/Reports/Download" asp-route-id="@r.Id">Download</a></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

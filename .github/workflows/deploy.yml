@@ -1,0 +1,97 @@
+name: Deploy
+
+# Build once, promote the same images through dev -> test -> prod.
+# Add "required reviewers" on the prod GitHub environment to gate production.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # OIDC login to Azure, no secret
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false # never interrupt a running deployment
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet test -c Release
+
+  build:
+    name: Build & push images
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy shared resources (container registry)
+        id: shared
+        run: |
+          name="$(az deployment sub create \
+            --name storeops-shared \
+            --location "${{ vars.AZURE_LOCATION || 'canadacentral' }}" \
+            --template-file infra/shared.bicep \
+            --query properties.outputs.registryName.value -o tsv)"
+          echo "registry-name=$name" >> "$GITHUB_OUTPUT"
+
+      - id: tag
+        run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        env:
+          REGISTRY: ${{ steps.shared.outputs.registry-name }}.azurecr.io
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          az acr login --name "${{ steps.shared.outputs.registry-name }}"
+          for app in web jobs; do
+            project="StoreOps.$( [ "$app" = web ] && echo Web || echo Jobs )"
+            docker build \
+              --file "src/${project}/Dockerfile" \
+              --build-arg APP_VERSION="$TAG" \
+              --label org.opencontainers.image.revision="$GITHUB_SHA" \
+              --tag "${REGISTRY}/storeops-${app}:${TAG}" .
+            docker push "${REGISTRY}/storeops-${app}:${TAG}"
+          done
+          echo "Images pushed with tag \`$TAG\`" >> "$GITHUB_STEP_SUMMARY"
+
+  dev:
+    needs: build
+    uses: ./.github/workflows/deploy-environment.yml
+    with:
+      environment: dev
+      image-tag: ${{ needs.build.outputs.image-tag }}
+      entra-client-id: ${{ vars.ENTRA_CLIENT_ID_DEV }}
+
+  test-env:
+    name: test
+    needs: [build, dev]
+    uses: ./.github/workflows/deploy-environment.yml
+    with:
+      environment: test
+      image-tag: ${{ needs.build.outputs.image-tag }}
+      entra-client-id: ${{ vars.ENTRA_CLIENT_ID_TEST }}
+
+  prod:
+    needs: [build, test-env]
+    uses: ./.github/workflows/deploy-environment.yml
+    with:
+      environment: prod
+      image-tag: ${{ needs.build.outputs.image-tag }}
+      entra-client-id: ${{ vars.ENTRA_CLIENT_ID_PROD }}

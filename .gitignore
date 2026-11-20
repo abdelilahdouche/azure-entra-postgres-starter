@@ -1,0 +1,23 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+App_Data/
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Bicep build output
+infra/**/*.json
+!infra/**/bicepconfig.json
+
+# Local secrets — never commit
+.env
+*.local.json
