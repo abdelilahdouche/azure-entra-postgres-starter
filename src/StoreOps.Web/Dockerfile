@@ -11,7 +11,7 @@ COPY src/StoreOps.Core/ src/StoreOps.Core/
 COPY src/StoreOps.Web/ src/StoreOps.Web/
 RUN dotnet publish src/StoreOps.Web/StoreOps.Web.csproj -c Release -o /app --no-restore /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS runtime
 ARG APP_VERSION=local
 ENV APP_VERSION=$APP_VERSION \
     ASPNETCORE_HTTP_PORTS=8080
