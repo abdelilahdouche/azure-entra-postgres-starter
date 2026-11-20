@@ -12,7 +12,7 @@ COPY src/StoreOps.Core/ src/StoreOps.Core/
 COPY src/StoreOps.Jobs/ src/StoreOps.Jobs/
 RUN dotnet publish src/StoreOps.Jobs/StoreOps.Jobs.csproj -c Release -o /app --no-restore /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/runtime:10.0 AS runtime
+FROM mcr.microsoft.com/dotnet/runtime:11.0 AS runtime
 ARG APP_VERSION=local
 ENV APP_VERSION=$APP_VERSION
 WORKDIR /app
