@@ -17,7 +17,7 @@ jobs:
     name: Build & test (.NET)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -38,7 +38,7 @@ jobs:
     name: Bicep build & lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - run: az bicep install
 
@@ -75,7 +75,7 @@ jobs:
       contents: read
       id-token: write # OIDC login, no secret
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: azure/login@v2
         with:
