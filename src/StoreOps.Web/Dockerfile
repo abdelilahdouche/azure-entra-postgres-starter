@@ -1,7 +1,7 @@
 # Build context: repository root
 #   docker build -f src/StoreOps.Web/Dockerfile -t storeops-web .
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 WORKDIR /src
 COPY nuget.config ./
 COPY src/StoreOps.Core/StoreOps.Core.csproj src/StoreOps.Core/
