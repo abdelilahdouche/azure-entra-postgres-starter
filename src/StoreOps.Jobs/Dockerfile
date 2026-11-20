@@ -2,7 +2,7 @@
 #   docker build -f src/StoreOps.Jobs/Dockerfile -t storeops-jobs .
 # The command (migrate | cleanup) is passed as container args by each Container Apps Job.
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 WORKDIR /src
 COPY nuget.config ./
 COPY src/StoreOps.Core/StoreOps.Core.csproj src/StoreOps.Core/
