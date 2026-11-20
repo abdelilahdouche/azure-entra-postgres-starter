@@ -9,13 +9,26 @@ updates:
         patterns: ["Azure.*", "Microsoft.Identity.*"]
       dotnet:
         patterns: ["Microsoft.*", "System.*"]
+    ignore:
+      # Stay on the .NET 10 LTS line; framework upgrades are a deliberate change.
+      - dependency-name: "Microsoft.Extensions.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.AspNetCore.*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
 
   - package-ecosystem: docker
     directories: ["/src/StoreOps.Web", "/src/StoreOps.Jobs"]
     schedule:
       interval: weekly
+    ignore:
+      # Base images follow the project's target framework (.NET 10 LTS).
+      - dependency-name: "dotnet/*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
